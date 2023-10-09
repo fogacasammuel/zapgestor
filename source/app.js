@@ -7,6 +7,16 @@ app.use(express.json());
 venom
   .create({
     session: "zapgestorapi", //name of session
+    puppeteerOptions: [
+      "--no-sandbox",
+      "--disable-setuid-sandbox",
+      "--disable-dev-shm-usage",
+      "--disable-accelerated-2d-canvas",
+      "--no-first-run",
+      "--no-zygote",
+      "--single-process",
+      "--disable-gpu",
+    ],
   })
   .then((client) => start(client))
   .catch((erro) => {
