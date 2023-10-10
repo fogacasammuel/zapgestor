@@ -14,7 +14,6 @@
     "http": "^0.0.1-security",
     "libphonenumber-js": "^1.10.47",
     "nodemon": "^3.0.1",
-    "puppeteer": "14.17.0",
-    "venom-bot": "^5.0.21"
+    "venom-bot": "4.3.7"
   }
 }
