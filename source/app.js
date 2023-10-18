@@ -1,12 +1,14 @@
 const express = require("express");
 const venom = require("venom-bot");
 
+const { questions, response } = require("./responses");
+
 const app = express();
 app.use(express.json());
 
 venom
   .create({
-    session: "zapgestorapi", //name of session
+    session: "zapgestorapi",
     puppeteerOptions: [
       "--no-sandbox",
       "--disable-setuid-sandbox",
@@ -22,6 +24,29 @@ venom
   .catch((erro) => {
     console.log(erro);
   });
+
+venom
+  .create({
+    session: "zapgestorassistant",
+    puppeteerOptions: [
+      "--no-sandbox",
+      "--disable-setuid-sandbox",
+      "--disable-dev-shm-usage",
+      "--disable-accelerated-2d-canvas",
+      "--no-first-run",
+      "--no-zygote",
+      "--single-process",
+      "--disable-gpu",
+    ],
+  })
+  .then((client) => startAssistant(client))
+  .catch((erro) => {
+    console.log("Error Assistant: ", erro);
+  });
+
+/**
+* API | ZapGestor
+*/
 
 function start(client) {
   //users
@@ -44,7 +69,7 @@ function start(client) {
     try {
       const groups = await client.getAllChats().then((chats) => {
         return chats.find((chat) => {
-          if(chat.isGroup) {
+          if (chat.isGroup) {
             data.push({
               group: chat.id._serialized,
               name: chat.name
@@ -91,10 +116,10 @@ function start(client) {
     }
 
     client.sendLinkPreview(
-        group.id._serialized,
-        body.link, 
-        body.content
-      ).catch((erro) => {
+      group.id._serialized,
+      body.link,
+      body.content
+    ).catch((erro) => {
       return res
         .status(500)
         .json({ error: 500, message: "Error when sending", erro: erro });
@@ -191,6 +216,87 @@ async function findGroupByName(client, groupName) {
   });
 
   return group;
+}
+
+/**
+ * Assistant | ZapGestor
+ */
+function startAssistant(client) {
+  //users
+  app.post("/assistant/text", async (req, res) => {
+    const body = req.body;
+
+    client.sendText(body.number, body.content).catch((erro) => {
+      return res
+        .status(500)
+        .json({ error: 500, message: "Erro ao enviar a mensagem", erro: erro });
+    });
+
+    return res.status(200).json();
+  });
+
+  app.post("/assistant/image", async (req, res) => {
+    const body = req.body;
+
+    client
+      .sendImage(
+        body.number,
+        body.image_path,
+        "image-send",
+        body.content
+      )
+      .catch((erro) => {
+        return res
+          .status(404)
+          .json({ error: 404, message: "Errp ap enviar Imagem", erro: erro });
+      });
+
+    return res.status(200).json();
+  });
+
+  app.post("/assistant/file", async (req, res) => {
+    const body = req.body;
+
+    client
+      .sendFile(
+        body.number,
+        body.file_path,
+        "file-send",
+        body.content
+      )
+      .catch((erro) => {
+        return res
+          .status(404)
+          .json({ error: 404, message: "Error when sending", erro: erro });
+      });
+
+    return res.status(200).json();
+  });
+
+  app.post("/assitant/voice", async (req, res) => {
+    const body = req.body;
+
+    client
+      .sendVoice(
+        body.number,
+        body.voice_path
+      )
+      .catch((erro) => {
+        return res
+          .status(404)
+          .json({ error: 404, message: "Error when sending", erro: erro });
+      });
+
+    return res.status(200).json();
+  });
+
+  client.onMessage((message) => {
+    const feedbacks = questions.feedbacks.human;
+    if (feedbacks.includes(message.body.toLowerCase()) && message.isGroupMsg === false) {
+      client.reply(message.from, response(questions.feedbacks.assistant), message.id)
+        .catch((erro) => { console.error('Error when sending: ', erro); });
+    }
+  });
 }
 
 app.listen(3000, () => console.log("Server rodando em :3000"));
